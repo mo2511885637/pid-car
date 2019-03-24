@@ -1,0 +1,124 @@
+
+
+#Imporditakse teeigd:
+import vrep                  #V-rep's library
+import time
+import PID    #ivPID
+
+
+def test_pid(P = 0.2,  I = 0.0, D= 0.0, L=100):
+    """Self-test PID class
+
+    .. note::
+        ...
+        for i in range(1, END):
+            pid.update(feedback)
+            output = pid.output
+            if pid.SetPoint > 0:
+                feedback += (output - (1/i))
+            if i>9:
+                pid.SetPoint = 1
+            time.sleep(0.02)
+        ---
+    """
+    pid = PID.PID(P, I, D)
+
+    pid.SetPoint=0
+    pid.setSampleTime(0.01)
+    for i in range(1,10):
+        pid.update(feedback)
+        output = pid.output
+        time.sleep(0.000001)
+        
+    Velocityleft=15-output
+    Velocityright=15+output
+    if Velocityleft<0:
+        Velocityleft=0
+    if Velocityright<0:
+        Velocityright=0
+    vrep.simxSetJointTargetVelocity(clientID,left_motor_handle,Velocityleft, vrep.simx_opmode_streaming)
+    vrep.simxSetJointTargetVelocity(clientID,right_motor_handle,Velocityright, vrep.simx_opmode_streaming)
+    print(output)  
+    print("kk")
+    print(feedback)
+    print("kkaa")
+    print(Velocityleft)
+    print(Velocityright)
+
+print('Program started')
+
+vrep.simxFinish(-1)
+while(1):
+    clientID = vrep.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
+    if clientID > -1:
+        break
+    else:
+        time.sleep(0.1)# 每隔0.2s检测一次，直到连接上V-rep
+        print("Failed connecting to remote API server!")
+print("Connection success!")
+
+#Getting motor handles获取电机手柄
+errorCode,left_motor_handle=vrep.simxGetObjectHandle(clientID,"left_joint",vrep.simx_opmode_blocking)
+errorCode,right_motor_handle=vrep.simxGetObjectHandle(clientID,"right_joint",vrep.simx_opmode_blocking)
+sensor_h=[] #handles list句柄表
+sensor_val=[] #Sensor value list传感器值列表
+
+#Getting sensor handles list获取传感器手柄列表
+for x in range(0,6):
+        errorCode,sensor_handle=vrep.simxGetObjectHandle(clientID,'line_sensor'+str(x),vrep.simx_opmode_oneshot_wait)
+        sensor_h.append(sensor_handle) #It is adding sensor handle values它正在添加传感器手柄值
+        errorCode,detectionstate, sensorreadingvalue=vrep.simxReadVisionSensor(clientID,sensor_h[x],vrep.simx_opmode_streaming)
+        sensor_val.append(1.0) #It is adding 1.0 to fill the sensor values on the list. In the while loop it is going to overwrite the values
+                               #它将添加1.0以填充列表中的传感器值。在while循环中，它将覆盖值
+time.sleep(1)
+t = time.time() #It is saving the time which is now它节省了现在的时间
+while (1):  #Cycle which doesn't end没有结束的循环
+    #It is writing down sensor handles and reading values它正在写下传感器手柄并读取值
+    summa = 0  #It is zeroing the  sum 它正在清零和
+    andur = 0	#and the sensor values以及传感器值 
+    for x in range(0,6):
+        errorCode,detectionstate, sensorreadingvalue=vrep.simxReadVisionSensor(clientID,sensor_h[x],vrep.simx_opmode_buffer)
+        #Reading sensor values读取传感器值
+        sensor_val[x]=sensorreadingvalue[1][0] #It is overwriting the sensor values它正在覆盖传感器值
+        print("Positsiooni väärtus kokku45 :",sensor_val[x] ,x)  
+    if sensor_val[2]<=0.3 or sensor_val[3]<=0.3:
+        feedback = 0
+    if sensor_val[1]<=0.3: 
+        feedback = 1
+    if sensor_val[0]<=0.3: 
+        feedback = 2 
+    if sensor_val[4]<=0.3: 
+        feedback = -1
+    if sensor_val[5]<=0.3: 
+        feedback = -2
+    if sensor_val[0]>0.3 and sensor_val[1]>0.3 and sensor_val[2]>0.3 and sensor_val[3]>0.3 and sensor_val[4]>0.3 and sensor_val[5]>0.3:
+        if feedback<0:
+            feedback=-3
+        elif feedback>0:
+            feedback=3
+    if __name__ == "__main__":
+        test_pid(2.05, 1, 0.002,L=50)
+    viivitus = round((time.time()-t),5) #calculating delay time 加尔各答时间
+    print("viivitus on: ", viivitus)
+    t = time.time() #Taking new time moment占用新的时间
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
